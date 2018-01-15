@@ -7,7 +7,6 @@ public class PlayerCameraSwitcher : MonoBehaviour {
     public Camera[] cameras = new Camera[3];
 
     public int activeCamera = 0;
-
     public SkinnedMeshRenderer visible;
 
     private void Start() {

@@ -27,10 +27,10 @@ public class PlayerMove : MonoBehaviour {
     float rotationX = 0F;
     float rotationY = 0F;
 
-    private List<float> rotArrayX = new List<float>();
+    private List<float> rotArrayX;
     float rotAverageX = 0F;
 
-    private List<float> rotArrayY = new List<float>();
+    private List<float> rotArrayY;
     float rotAverageY = 0F;
 
     public float frameCounter = 5;
@@ -44,10 +44,28 @@ public class PlayerMove : MonoBehaviour {
     private Vector3 move;
     private bool isMoving = false;
 
+    // GameManager
+    private BlockManager bm;
+
+    public CameraMovement head;
+
     private void Start() {
+
+        rotArrayX = new List<float>();
+        rotArrayY = new List<float>();
+
         rb = GetComponent<Rigidbody>();
         animator = GetComponentInChildren<Animator>();
         originalRotation = transform.localRotation;
+
+        bm = GameObject.FindGameObjectWithTag("GameController").GetComponent<BlockManager>();
+
+    }
+
+    private void Update() {
+
+        bm.UpdatePlayerPosition(transform.position);
+
     }
 
     private void FixedUpdate () {

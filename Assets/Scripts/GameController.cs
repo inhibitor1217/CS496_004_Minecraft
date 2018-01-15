@@ -9,17 +9,19 @@ public class GameController : MonoBehaviour {
 
     private PlayerCameraSwitcher pcs;
 
+    private bool debugMode = false;
+    private bool menuMode = false;
+
     // UI Components
     public Image UI_Cursor;
 
-    // Block Prefabs;
-    public GameObject[] blockPrefabs = new GameObject[128];
+    public GameObject UI_DebugPanel;
+    public GameObject UI_DebugTextXYZ;
+    private Text UI_DebugTextXYZ_text;
+    public GameObject UI_DebugTextVersion;
 
-    // Generated Textures
-    private float[,,] textureRandomArray;
-
-    public Texture2D GrassTopTexture;
-    public Texture2D TransparentTexture;
+    public GameObject UI_MenuPanel;
+    public GameObject UI_MenuButtonReturnHome;
 
     private void Start() {
         
@@ -29,78 +31,67 @@ public class GameController : MonoBehaviour {
 
         pcs = player.GetComponent<PlayerCameraSwitcher>();
 
-        // Generate Blocks
-        
-        // Generate Textures
-        /*
-        textureRandomArray = GenerateTextureArray();
+        UI_DebugTextXYZ_text = UI_DebugTextXYZ.GetComponent<Text>();
 
-        GrassTopTexture = GenerateTextureFromColor(new Color(0.25f, 0.7f, 0.25f));
-        TransparentTexture = GenerateTransparentTexture();
-        */
+        setDebugMode(false);
+        setMenuMode(false);
+
     }
 
     private void Update() {
         
+        // Esc Key Handling (Menu Mode)
+        if(Input.GetKeyDown(KeyCode.Escape)) {
+            setMenuMode(!menuMode);
+        }
+
+        // F3 Key Handling (Debug Mode)
+        if(Input.GetKeyDown(KeyCode.F3)) {
+            setDebugMode(!debugMode);
+        }
+
         // F5 Key Handling (Camera switch)
         if(Input.GetKeyDown(KeyCode.F5)) {
             pcs.SwitchCamera();
             UI_Cursor.enabled = (pcs.activeCamera == 0);
         }
 
-    }
-
-    /*
-    private float[,,] GenerateTextureArray() {
-
-        float[,,] arr = new float[16, 16, 3];
-
-        for (int i = 0; i < 16; i++) {
-            for (int j = 0; j < 16; j++) {
-                for(int k = 0; k < 3; k++) {
-                    arr[i, j, k] = Random.Range(-0.08f, 0.08f);
-                }
-            }
+        // Player Position Update
+        if (debugMode) {
+            Vector3 pos = player.transform.position;
+            UI_DebugTextXYZ_text.text = " XYZ: " + pos.x.ToString("0.0000") + "/" + pos.y.ToString("0.0000") + "/" + pos.z.ToString("0.0000");
         }
 
-        return arr;
-
     }
 
-    private Texture2D GenerateTextureFromColor(Color c) {
+    private void setDebugMode(bool mode) {
+        debugMode = mode;
+        UI_DebugPanel.SetActive(debugMode);
+        UI_DebugTextVersion.SetActive(debugMode);
+        UI_DebugTextXYZ.SetActive(debugMode);
+    }
 
-        Texture2D texture = new Texture2D(16, 16, TextureFormat.ARGB32, false);
+    private void setMenuMode(bool mode) {
+        
+        menuMode = mode;
+        UI_MenuPanel.SetActive(menuMode);
+        UI_MenuButtonReturnHome.SetActive(menuMode);
+        Cursor.visible = menuMode;
 
-        for(int i = 0; i < texture.width; i++) {
-            for(int j = 0; j < texture.height; j++) {
-                texture.SetPixel(i, j, new Color(c.r + textureRandomArray[i, j, 0],
-                                                 c.g + textureRandomArray[i, j, 1],
-                                                 c.b + textureRandomArray[i, j, 2]));
-            }
+        // Disable Movement
+        if (player != null) {
+            PlayerMove pm = player.GetComponent<PlayerMove>();
+            pm.head.GetComponent<CameraMovement>().enabled = !menuMode;
+            pm.enabled = !menuMode;
+            Pointer p = player.GetComponent<Pointer>();
+            p.enabled = !menuMode;
         }
-        texture.Apply();
-        texture.filterMode = FilterMode.Point;
-
-        return texture;
-
-    }
-
-    private Texture2D GenerateTransparentTexture() {
-
-        Texture2D texture = new Texture2D(16, 16, TextureFormat.ARGB32, false);
-
-        for (int i = 0; i < texture.width; i++) {
-            for (int j = 0; j < texture.height; j++) {
-                texture.SetPixel(i, j, new Color(1.0f, 1.0f, 1.0f, 0.0f));
-            }
+        var cameras = GameObject.FindGameObjectsWithTag("MainCamera");
+        foreach(GameObject cam in cameras) {
+            CameraMovement cm = cam.GetComponent<CameraMovement>();
+            if (cm != null) cm.enabled = !menuMode;
         }
-        texture.Apply();
-        texture.filterMode = FilterMode.Point;
-
-        return texture;
 
     }
-
-    */
 
 }
