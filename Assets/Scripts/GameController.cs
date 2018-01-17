@@ -74,6 +74,7 @@ public class GameController : MonoBehaviour {
         if(Input.GetKeyDown(KeyCode.F12)) {
             cheatMode = !cheatMode;
             rb.useGravity = !cheatMode;
+            player.GetComponent<PlayerMove>().walkSpeed = cheatMode ? 10.0f : 3.0f;
         }
 
         if(cheatMode) {

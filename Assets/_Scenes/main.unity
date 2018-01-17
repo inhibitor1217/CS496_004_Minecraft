@@ -864,7 +864,7 @@ Prefab:
     - target: {fileID: 114921293219502532, guid: b2a98dd9467ce8f40ba773e8fa76ebee,
         type: 2}
       propertyPath: walkSpeed
-      value: 10
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 4524919651373906, guid: b2a98dd9467ce8f40ba773e8fa76ebee, type: 2}
       propertyPath: m_LocalPosition.y
