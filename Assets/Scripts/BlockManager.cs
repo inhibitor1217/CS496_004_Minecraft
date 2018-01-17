@@ -1,5 +1,4 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,6 +8,31 @@ public class BlockManager : MonoBehaviour {
 
     // External Storage Path
     public string mapPath = "";
+
+    // Map Load & Save Queue
+    private class MapTask { public enum TaskType { Load = 1, Save = 2 };
+                            public TaskType myType; };
+    private class LoadTask : MapTask {
+        public int chunkX, chunkY;
+        public int saveArrayX, saveArrayY;
+        public LoadTask(int cX, int cY, int x, int y) {
+            myType = TaskType.Load;
+            chunkX = cX; chunkY = cY;
+            saveArrayX = x; saveArrayY = y;
+        }
+    }
+    private class SaveTask : MapTask {
+        public Chunk chunk;
+        public SaveTask(Chunk chunk) {
+            myType = TaskType.Save;
+            this.chunk = chunk;
+        }
+    }
+    private Queue<MapTask> mapQueue;
+    private float garbageCounter = 0.0f;
+    private const float garbageCountMax = 15.0f;
+
+    public GameObject terrainGeneratorPrefab;
 
     // Block Crack Particle Effect
     public GameObject crackParticlePrefab;
@@ -47,6 +71,8 @@ public class BlockManager : MonoBehaviour {
             GenerateTerrain();
         }
 
+        mapQueue = new Queue<MapTask>();
+
     }
 
     private void OnDestroy() {
@@ -57,9 +83,98 @@ public class BlockManager : MonoBehaviour {
                 }
             }
         }
+        while (mapQueue.Count > 0) {
+            MapTask front = mapQueue.Dequeue();
+            if (front.myType == MapTask.TaskType.Save) {
+                SaveTask task = (SaveTask)front;
+                SaveChunk(task.chunk);
+            }
+        }
     }
 
     private void Update() {
+
+        // Chunk Loading
+        for (int i = 0; i < 2; i++) {
+            if (mapQueue.Count > 0) {
+                MapTask front = mapQueue.Dequeue();
+                if (front.myType == MapTask.TaskType.Load) {
+                    LoadTask task = (LoadTask)front;
+                    Chunk chunk = LoadChunk(task.chunkX, task.chunkY);
+                    chunks[task.saveArrayX, task.saveArrayY] = chunk;
+                } else if (front.myType == MapTask.TaskType.Save) {
+                    SaveTask task = (SaveTask)front;
+                    SaveChunk(task.chunk);
+                }
+            }
+        }
+
+        garbageCounter += Time.deltaTime;
+
+        if (garbageCounter > garbageCountMax) {
+            garbageCounter = 0.0f;
+            var cArray = GameObject.FindGameObjectsWithTag("Block");
+            foreach (GameObject obj in cArray) {
+                Chunk c = obj.GetComponent<Chunk>();
+                bool flag = false;
+                for (int i = 0; i < Constants.chunkArraySize; i++) {
+                    for (int j = 0; j < Constants.chunkArraySize; j++) {
+                        if (c == chunks[i, j]) flag = true;
+                    }
+                }
+                if (!flag) Destroy(obj);
+            }
+        }
+
+        /*
+        if(Input.GetMouseButtonDown(0)) {
+
+           TerrainGenerator tGen = Instantiate(terrainGeneratorPrefab).GetComponent<TerrainGenerator>();
+           tGen.GenerateBiome(Constants.mapSizeX, Constants.mapSizeY);
+
+           GameObject plane = GameObject.FindGameObjectWithTag("TerrainVisualizer");
+           MeshRenderer mr = plane.GetComponent<MeshRenderer>();
+
+           Texture2D t = new Texture2D(64, 64, TextureFormat.ARGB32, false);
+           mr.material.mainTexture = t;
+           t.filterMode = FilterMode.Point;
+
+           for (int i = 0; i < Constants.mapSizeX; i++) {
+               for (int j = 0; j < Constants.mapSizeY; j++) {
+                   Color color = Color.black;
+                   switch (tGen.terrain[i, j]) {
+                       case 0:
+                           color = Color.black;
+                           break;
+                       case 1:
+                           color = Color.blue;
+                           break;
+                       case 2:
+                           color = Color.yellow;
+                           break;
+                       case 3:
+                           color = new Color(208.0f / 255.0f, 187.0f / 255.0f, 123.0f / 255.0f);
+                           break;
+                       case 4:
+                           color = Color.green;
+                           break;
+                       case 5:
+                           color = new Color(255.0f / 255.0f, 255.0f / 255.0f, 128.0f / 255.0f);
+                           break;
+                       case 6:
+                           color = new Color(75.0f / 255.0f, 177.0f / 255.0f, 255.0f / 255.0f);
+                           break;
+                        case 7:
+                            color = new Color(27.0f / 255.0f, 153.0f / 255.0f, 214.0f / 255.0f);
+                            break;
+                   }
+                   t.SetPixel(i, j, color);
+               }
+           }
+           t.Apply();
+       
+        }
+        */
 
         // Handle Cracking
         if (selected && Constants.Hardness[getBlock(selectedX, selectedY, selectedZ)] > 0.0f) {
@@ -93,15 +208,6 @@ public class BlockManager : MonoBehaviour {
         return chunks[getChunkX(x), getChunkY(z)].blocks[x & 0x0F, y & 0x7F, z & 0x0F];
     }
 
-    // This method is only used to initialize terrain
-    private void setBlockInChunk(int x, int y, int z, byte block, Chunk chunk) {
-        if(0 <= x && x < Constants.chunkSizeX 
-        && 0 <= y && y < Constants.chunkSizeY 
-        && 0 <= z && z < Constants.chunkSizeZ) {
-            chunk.blocks[x, y, z] = block;
-        }
-    }
-
     private void setBlock(int x, int y, int z, byte block) {
         chunks[getChunkX(x), getChunkY(z)].blocks[x & 0x0F, y & 0x7F, z & 0x0F] = block;
     }
@@ -112,29 +218,10 @@ public class BlockManager : MonoBehaviour {
     }
 
     public void GenerateTerrain() {
-    
-        // TODO : use priority queue for sequencing chunk rendering
-        for (int i = -8; i < 8; i++) {
-            for (int j = -8; j < 8; j++) {
 
-                Chunk chunk = InitializeChunk(i, j);
-
-                for (int x = 0; x < 16; x++) {
-                    for (int z = 0; z < 16; z++) {
-                        for (int y = 0; y < 64; y++) {
-                            if (y == 0)       setBlockInChunk(x, y, z, 0x07, chunk);
-                            else if (y == 63) setBlockInChunk(x, y, z, 0x02, chunk);
-                            else              setBlockInChunk(x, y, z, 0x03, chunk);
-                        }
-                    }
-                }
-                chunk.Render();
-                SaveChunk(chunk);
-
-                Destroy(chunk.gameObject);
-
-            }
-        }
+        TerrainGenerator tGen = Instantiate(terrainGeneratorPrefab).GetComponent<TerrainGenerator>();
+        tGen.mapPath = mapPath;
+        tGen.Generate(Constants.mapSizeX, Constants.mapSizeY);
 
     }
 
@@ -161,7 +248,7 @@ public class BlockManager : MonoBehaviour {
             ret.chunkX = data.chunkX;
             ret.chunkY = data.chunkY;
             
-            ret.blocks = data.blockData;
+            ret.blocks = Chunk.decodeByteArray(data.blockData);
             ret.Render();
 
             return ret;
@@ -177,9 +264,15 @@ public class BlockManager : MonoBehaviour {
         if (chunk == null) return;
 
         ChunkData data = chunk.makeChunkData();
+        SaveChunkData(data);
+        Destroy(chunk.gameObject);
+        
+    }
+
+    public void SaveChunkData(ChunkData data) {
         BinaryFormatter binaryFormatter = new BinaryFormatter();
 
-        if(!Directory.Exists(mapPath + "/chunks")) {
+        if (!Directory.Exists(mapPath + "/chunks")) {
             Directory.CreateDirectory(mapPath + "/chunks");
         }
 
@@ -190,7 +283,6 @@ public class BlockManager : MonoBehaviour {
 
         binaryFormatter.Serialize(file, data);
         file.Close();
-        
     }
 
     public void setSelected(bool selected, Vector3 hitPoint, Vector3 forward, Vector3 up) {
@@ -214,7 +306,7 @@ public class BlockManager : MonoBehaviour {
 
                 if (particleObj != null) Destroy(particleObj);
                 particleObj = Instantiate(crackParticlePrefab, hitPoint, Quaternion.LookRotation(forward, up));
-                byte texture = Constants.Resource[getBlock(selectedX, selectedY, selectedZ), 1];
+                int texture = Constants.Resource[getBlock(selectedX, selectedY, selectedZ), 5];
                 int UVx = texture & 0xF;
                 int UVy = ~(texture >> 4);
                 particleObj.GetComponent<ParticleSystemRenderer>().material.SetTextureOffset("_MainTex", new Vector2((float)UVx / 16.0f, (float)UVy / 16.0f));
@@ -342,8 +434,8 @@ public class BlockManager : MonoBehaviour {
         int texture = 240 + phase;
         int UVx = texture & 0xF;
         int UVy = ~(texture >> 4);
-        float UVr = 1.0f / 16.0f;
-        Vector2 tileOffset = new Vector2((float)UVx, (float)UVy) * UVr;
+        float UVrX = 1.0f / 16.0f, UVrY = 1.0f / 32.0f;
+        Vector2 tileOffset = new Vector2((float)UVx * UVrX, (float)UVy * UVrY);
 
         // RIGHT
         if (Constants.isTransparent(getBlock(x + 1, y, z))) {
@@ -357,9 +449,9 @@ public class BlockManager : MonoBehaviour {
             triangles.AddRange(newTriangles);
 
             uvs.Add(new Vector2(0f, 0f) + tileOffset);
-            uvs.Add(new Vector2(UVr, 0f) + tileOffset);
-            uvs.Add(new Vector2(0f, UVr) + tileOffset);
-            uvs.Add(new Vector2(UVr, UVr) + tileOffset);
+            uvs.Add(new Vector2(UVrX, 0f) + tileOffset);
+            uvs.Add(new Vector2(0f, UVrY) + tileOffset);
+            uvs.Add(new Vector2(UVrX, UVrY) + tileOffset);
         }
 
         // LEFT
@@ -374,9 +466,9 @@ public class BlockManager : MonoBehaviour {
             triangles.AddRange(newTriangles);
 
             uvs.Add(new Vector2(0f, 0f) + tileOffset);
-            uvs.Add(new Vector2(UVr, 0f) + tileOffset);
-            uvs.Add(new Vector2(0f, UVr) + tileOffset);
-            uvs.Add(new Vector2(UVr, UVr) + tileOffset);
+            uvs.Add(new Vector2(UVrX, 0f) + tileOffset);
+            uvs.Add(new Vector2(0f, UVrY) + tileOffset);
+            uvs.Add(new Vector2(UVrX, UVrY) + tileOffset);
         }
 
         // TOP
@@ -391,9 +483,9 @@ public class BlockManager : MonoBehaviour {
             triangles.AddRange(newTriangles);
 
             uvs.Add(new Vector2(0f, 0f) + tileOffset);
-            uvs.Add(new Vector2(UVr, 0f) + tileOffset);
-            uvs.Add(new Vector2(0f, UVr) + tileOffset);
-            uvs.Add(new Vector2(UVr, UVr) + tileOffset);
+            uvs.Add(new Vector2(UVrX, 0f) + tileOffset);
+            uvs.Add(new Vector2(0f, UVrY) + tileOffset);
+            uvs.Add(new Vector2(UVrX, UVrY) + tileOffset);
         }
 
         // BOT
@@ -408,9 +500,9 @@ public class BlockManager : MonoBehaviour {
             triangles.AddRange(newTriangles);
 
             uvs.Add(new Vector2(0f, 0f) + tileOffset);
-            uvs.Add(new Vector2(UVr, 0f) + tileOffset);
-            uvs.Add(new Vector2(0f, UVr) + tileOffset);
-            uvs.Add(new Vector2(UVr, UVr) + tileOffset);
+            uvs.Add(new Vector2(UVrX, 0f) + tileOffset);
+            uvs.Add(new Vector2(0f, UVrY) + tileOffset);
+            uvs.Add(new Vector2(UVrX, UVrY) + tileOffset);
         }
 
         // BACK
@@ -425,9 +517,9 @@ public class BlockManager : MonoBehaviour {
             triangles.AddRange(newTriangles);
 
             uvs.Add(new Vector2(0f, 0f) + tileOffset);
-            uvs.Add(new Vector2(UVr, 0f) + tileOffset);
-            uvs.Add(new Vector2(0f, UVr) + tileOffset);
-            uvs.Add(new Vector2(UVr, UVr) + tileOffset);
+            uvs.Add(new Vector2(UVrX, 0f) + tileOffset);
+            uvs.Add(new Vector2(0f, UVrY) + tileOffset);
+            uvs.Add(new Vector2(UVrX, UVrY) + tileOffset);
         }
 
         // FRONT
@@ -442,9 +534,9 @@ public class BlockManager : MonoBehaviour {
             triangles.AddRange(newTriangles);
 
             uvs.Add(new Vector2(0f, 0f) + tileOffset);
-            uvs.Add(new Vector2(UVr, 0f) + tileOffset);
-            uvs.Add(new Vector2(0f, UVr) + tileOffset);
-            uvs.Add(new Vector2(UVr, UVr) + tileOffset);
+            uvs.Add(new Vector2(UVrX, 0f) + tileOffset);
+            uvs.Add(new Vector2(0f, UVrY) + tileOffset);
+            uvs.Add(new Vector2(UVrX, UVrY) + tileOffset);
         }
 
         mesh.vertices = vertices.ToArray();
@@ -473,17 +565,13 @@ public class BlockManager : MonoBehaviour {
             
             for(int dy = -Constants.visibleChunkDistance; dy <= Constants.visibleChunkDistance; dy++) {
                 
-                chunks[(chunkOffsetX + Constants.chunkArraySize + (dy > 0 ? dy : -dy) - Constants.visibleChunkDistance - 1 ) & Constants.chunkArrayMask,
-                       (chunkOffsetY + Constants.chunkArraySize + dy) & Constants.chunkArrayMask] = LoadChunk(_playerChunkX + (dy > 0 ? dy : -dy) - Constants.visibleChunkDistance, playerChunkY + dy);
+                mapQueue.Enqueue(new LoadTask(_playerChunkX + (dy > 0 ? dy : -dy) - Constants.visibleChunkDistance, playerChunkY + dy,
+                                              (chunkOffsetX + Constants.chunkArraySize + (dy > 0 ? dy : -dy) - Constants.visibleChunkDistance - 1) & Constants.chunkArrayMask,
+                                              (chunkOffsetY + Constants.chunkArraySize + dy) & Constants.chunkArrayMask));
 
-                Chunk saveChunk = chunks[(chunkOffsetX - (dy > 0 ? dy : -dy) + Constants.visibleChunkDistance) & Constants.chunkArrayMask,
-                                         (chunkOffsetY + Constants.chunkArraySize + dy) & Constants.chunkArrayMask];
-                chunks[(chunkOffsetX - (dy > 0 ? dy : -dy) + Constants.visibleChunkDistance) & Constants.chunkArrayMask,
-                       (chunkOffsetY + Constants.chunkArraySize + dy) & Constants.chunkArrayMask] = null;
-                if (saveChunk != null) {
-                    SaveChunk(saveChunk);
-                    Destroy(saveChunk.gameObject);
-                }
+                Chunk chunk = chunks[(chunkOffsetX - (dy > 0 ? dy : -dy) + Constants.visibleChunkDistance) & Constants.chunkArrayMask,
+                                        (chunkOffsetY + Constants.chunkArraySize + dy) & Constants.chunkArrayMask];
+                mapQueue.Enqueue(new SaveTask(chunk));
 
             }
             chunkOffsetX += Constants.chunkArraySize - 1;
@@ -493,17 +581,14 @@ public class BlockManager : MonoBehaviour {
         
             for (int dy = -Constants.visibleChunkDistance; dy <= Constants.visibleChunkDistance; dy++) {
 
-                chunks[(chunkOffsetX + Constants.visibleChunkDistance - (dy > 0 ? dy : -dy) + 1) & Constants.chunkArrayMask,
-                       (chunkOffsetY + Constants.chunkArraySize + dy) & Constants.chunkArrayMask] = LoadChunk(_playerChunkX - (dy > 0 ? dy : -dy) + Constants.visibleChunkDistance, playerChunkY + dy);
+                mapQueue.Enqueue(new LoadTask(_playerChunkX - (dy > 0 ? dy : -dy) + Constants.visibleChunkDistance, playerChunkY + dy,
+                                              (chunkOffsetX + Constants.visibleChunkDistance - (dy > 0 ? dy : -dy) + 1) & Constants.chunkArrayMask,
+                                              (chunkOffsetY + Constants.chunkArraySize + dy) & Constants.chunkArrayMask));
 
-                Chunk saveChunk = chunks[(chunkOffsetX + Constants.chunkArraySize + (dy > 0 ? dy : -dy) - Constants.visibleChunkDistance) & Constants.chunkArrayMask,
-                                         (chunkOffsetY + Constants.chunkArraySize + dy) & Constants.chunkArrayMask];
-                chunks[(chunkOffsetX + Constants.chunkArraySize + (dy > 0 ? dy : -dy) - Constants.visibleChunkDistance) & Constants.chunkArrayMask,
-                       (chunkOffsetY + Constants.chunkArraySize + dy) & Constants.chunkArrayMask] = null;
-                if (saveChunk != null) {
-                    SaveChunk(saveChunk);
-                    Destroy(saveChunk.gameObject);
-                }
+                Chunk chunk = chunks[(chunkOffsetX + Constants.chunkArraySize + (dy > 0 ? dy : -dy) - Constants.visibleChunkDistance) & Constants.chunkArrayMask,
+                                        (chunkOffsetY + Constants.chunkArraySize + dy) & Constants.chunkArrayMask];
+                mapQueue.Enqueue(new SaveTask(chunk));
+
             }
             chunkOffsetX += 1;
             chunkOffsetX &= Constants.chunkArrayMask;
@@ -516,17 +601,14 @@ public class BlockManager : MonoBehaviour {
             
             for(int dx = -Constants.visibleChunkDistance; dx <= Constants.visibleChunkDistance; dx++) {
 
-                chunks[(chunkOffsetX + Constants.chunkArraySize + dx) & Constants.chunkArrayMask,
-                       (chunkOffsetY + Constants.chunkArraySize + (dx > 0 ? dx : -dx) - Constants.visibleChunkDistance - 1) & Constants.chunkArrayMask] = LoadChunk(playerChunkX + dx, _playerChunkY + (dx > 0 ? dx : -dx) - Constants.visibleChunkDistance);
+                mapQueue.Enqueue(new LoadTask(playerChunkX + dx, _playerChunkY + (dx > 0 ? dx : -dx) - Constants.visibleChunkDistance,
+                                              (chunkOffsetX + Constants.chunkArraySize + dx) & Constants.chunkArrayMask,
+                                              (chunkOffsetY + Constants.chunkArraySize + (dx > 0 ? dx : -dx) - Constants.visibleChunkDistance - 1) & Constants.chunkArrayMask));
 
-                Chunk saveChunk = chunks[(chunkOffsetX + Constants.chunkArraySize + dx) & Constants.chunkArrayMask,
-                                         (chunkOffsetY + Constants.visibleChunkDistance - (dx > 0 ? dx : -dx)) & Constants.chunkArrayMask];
-                chunks[(chunkOffsetX + Constants.chunkArraySize + dx) & Constants.chunkArrayMask,
-                       (chunkOffsetY + Constants.visibleChunkDistance - (dx > 0 ? dx : -dx)) & Constants.chunkArrayMask] = null;
-                if (saveChunk != null) {
-                    SaveChunk(saveChunk);
-                    Destroy(saveChunk.gameObject);
-                }
+                Chunk chunk = chunks[(chunkOffsetX + Constants.chunkArraySize + dx) & Constants.chunkArrayMask,
+                                        (chunkOffsetY + Constants.visibleChunkDistance - (dx > 0 ? dx : -dx)) & Constants.chunkArrayMask];
+                mapQueue.Enqueue(new SaveTask(chunk));
+
             }
             chunkOffsetY += Constants.chunkArraySize - 1;
             chunkOffsetY &= Constants.chunkArrayMask;
@@ -535,17 +617,14 @@ public class BlockManager : MonoBehaviour {
             
             for (int dx = -Constants.visibleChunkDistance; dx <= Constants.visibleChunkDistance; dx++) {
 
-                chunks[(chunkOffsetX + Constants.chunkArraySize + dx) & Constants.chunkArrayMask,
-                       (chunkOffsetY + Constants.visibleChunkDistance - (dx > 0 ? dx : -dx) + 1) & Constants.chunkArrayMask] = LoadChunk(playerChunkX + dx, _playerChunkY - (dx > 0 ? dx : -dx) + Constants.visibleChunkDistance);
+                mapQueue.Enqueue(new LoadTask(playerChunkX + dx, _playerChunkY - (dx > 0 ? dx : -dx) + Constants.visibleChunkDistance,
+                                              (chunkOffsetX + Constants.chunkArraySize + dx) & Constants.chunkArrayMask,
+                                              (chunkOffsetY + Constants.visibleChunkDistance - (dx > 0 ? dx : -dx) + 1) & Constants.chunkArrayMask));
 
-                Chunk saveChunk = chunks[(chunkOffsetX + Constants.chunkArraySize + dx) & Constants.chunkArrayMask,
-                                         (chunkOffsetY + Constants.chunkArraySize + (dx > 0 ? dx : -dx) - Constants.visibleChunkDistance) & Constants.chunkArrayMask];
-                chunks[(chunkOffsetX + Constants.chunkArraySize + dx) & Constants.chunkArrayMask,
-                       (chunkOffsetY + Constants.chunkArraySize + (dx > 0 ? dx : -dx) - Constants.visibleChunkDistance) & Constants.chunkArrayMask] = null;
-                if (saveChunk != null) {
-                    SaveChunk(saveChunk);
-                    Destroy(saveChunk.gameObject);
-                }
+                Chunk chunk = chunks[(chunkOffsetX + Constants.chunkArraySize + dx) & Constants.chunkArrayMask,
+                                        (chunkOffsetY + Constants.chunkArraySize + (dx > 0 ? dx : -dx) - Constants.visibleChunkDistance) & Constants.chunkArrayMask];
+                mapQueue.Enqueue(new SaveTask(chunk));
+
             }
             chunkOffsetY += 1;
             chunkOffsetY &= Constants.chunkArrayMask;
@@ -557,11 +636,14 @@ public class BlockManager : MonoBehaviour {
     }
 
     private void InitializeChunkArray() {
-        for(int dx = -Constants.visibleChunkDistance; dx <= Constants.visibleChunkDistance; dx++) {
-            for(int dy = -Constants.visibleChunkDistance; dy <= Constants.visibleChunkDistance; dy++) {
-                if ((dx > 0 ? dx : -dx) + (dy > 0 ? dy : -dy) > Constants.visibleChunkDistance) continue;
-                chunks[(dx + chunkOffsetX + Constants.chunkArraySize) & Constants.chunkArrayMask, 
-                       (dy + chunkOffsetY + Constants.chunkArraySize) & Constants.chunkArrayMask] = LoadChunk(playerChunkX + dx, playerChunkY + dy);
+        for (int d = 0; d <= Constants.visibleChunkDistance; d++) {
+            for (int dx = -Constants.visibleChunkDistance; dx <= Constants.visibleChunkDistance; dx++) {
+                for (int dy = -Constants.visibleChunkDistance; dy <= Constants.visibleChunkDistance; dy++) {
+                    if ((dx > 0 ? dx : -dx) + (dy > 0 ? dy : -dy) != d) continue;
+                    mapQueue.Enqueue(new LoadTask(playerChunkX + dx, playerChunkY + dy,
+                                                 (dx + chunkOffsetX + Constants.chunkArraySize) & Constants.chunkArrayMask,
+                                                 (dy + chunkOffsetY + Constants.chunkArraySize) & Constants.chunkArrayMask));
+                }
             }
         }
         initializedChunkArray = true;

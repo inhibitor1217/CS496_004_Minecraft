@@ -315,7 +315,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: New World
+  m_Text: 
 --- !u!222 &42036293
 CanvasRenderer:
   m_ObjectHideFlags: 0

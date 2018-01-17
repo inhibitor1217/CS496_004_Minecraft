@@ -51,4 +51,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 86728d86df48617488e15f1c46335bfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  tileset: {fileID: 2100000, guid: f85d088791f750e44bf4802b513e7417, type: 2}
+  tileset: {fileID: 2100000, guid: c94f473ea0821cd42999baf8ba4b02e7, type: 2}
+  chunkX: 0
+  chunkY: 0

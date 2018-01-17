@@ -1,0 +1,20 @@
+id: -1
+name: Empty
+stackable: false
+slug: empty
+,
+id: 1
+name: Stone
+stackable: true
+slug: stone
+,
+id: 2
+name: Grass
+stackable: true
+slug: grass
+,
+id: 3
+name: Dirt
+stackable: true
+slug: dirt
+;

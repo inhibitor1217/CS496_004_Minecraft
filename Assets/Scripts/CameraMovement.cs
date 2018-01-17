@@ -33,6 +33,9 @@ public class CameraMovement : MonoBehaviour {
     Quaternion originalRotation;
 
     private void FixedUpdate() {
+        
+        
+
         if (axes == RotationAxes.MouseXAndY) {
             rotAverageY = 0f;
             rotAverageX = 0f;

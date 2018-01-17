@@ -1,0 +1,65 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1001 &100100000
+Prefab:
+  m_ObjectHideFlags: 1
+  serializedVersion: 2
+  m_Modification:
+    m_TransformParent: {fileID: 0}
+    m_Modifications: []
+    m_RemovedComponents: []
+  m_ParentPrefab: {fileID: 0}
+  m_RootGameObject: {fileID: 1600237967723594}
+  m_IsPrefabParent: 1
+--- !u!1 &1600237967723594
+GameObject:
+  m_ObjectHideFlags: 0
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  serializedVersion: 5
+  m_Component:
+  - component: {fileID: 4073756327802614}
+  - component: {fileID: 114302986675025382}
+  m_Layer: 0
+  m_Name: TerrainGenerator
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4073756327802614
+Transform:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1600237967723594}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 8, y: 71.5, z: 8}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &114302986675025382
+MonoBehaviour:
+  m_ObjectHideFlags: 1
+  m_PrefabParentObject: {fileID: 0}
+  m_PrefabInternal: {fileID: 100100000}
+  m_GameObject: {fileID: 1600237967723594}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db707f06d95d2f144ae6045b5e36498e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  mapPath: 
+  chunkTerrainGenPrefab:
+  - {fileID: 1961681990780718, guid: 967ebd8e104d1a149841467aa3db7e9e, type: 2}
+  - {fileID: 1306075339224620, guid: 3c6bc898ad103a346a53c31fd76b1d70, type: 2}
+  - {fileID: 1855248288054412, guid: 2401aa2674d2f094fb0fabb811eb4e8a, type: 2}
+  - {fileID: 1071934978698260, guid: 994299d13a76807428ae4e704b815d70, type: 2}
+  - {fileID: 1383885979017352, guid: 808be6afa9c00eb48a77ddaaccfb708a, type: 2}
+  - {fileID: 1855248288054412, guid: 2401aa2674d2f094fb0fabb811eb4e8a, type: 2}
+  - {fileID: 1815725270829870, guid: ff2a81c0a86b3b842a18d40a45ea0f07, type: 2}
+  - {fileID: 1230414484519774, guid: bfb727eddc1cab449a92891b1c39fe07, type: 2}
+  - {fileID: 1812273224720830, guid: df0883fb51c5d1e4f82d6b78f3c0aa9a, type: 2}
+  - {fileID: 1561482548363490, guid: 3a57e2c6244734d4ca39c13d07e2acda, type: 2}

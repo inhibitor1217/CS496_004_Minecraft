@@ -87,6 +87,12 @@ public class PlayerMove : MonoBehaviour {
             rb.AddForce(jumpForce);
         }
 
+        // Remove Horizontal Velocity
+        rb.AddForce(new Vector3(-rb.velocity.x, 0.0f, -rb.velocity.z));
+
+        // Remove Angular Velocity
+        rb.AddTorque(new Vector3(0.0f, -rb.angularVelocity.y, 0.0f));
+
         // Rotation & Camera View with Mouse Input
         if (axes == RotationAxes.MouseXAndY) {
             rotAverageY = 0f;

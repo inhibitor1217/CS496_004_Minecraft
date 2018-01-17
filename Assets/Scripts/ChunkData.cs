@@ -8,7 +8,7 @@ public class ChunkData {
 
     public string id;
     public int chunkX, chunkY;
-    public byte[,,] blockData;
+    public byte[] blockData;
     // public SerializableVector3[] verticesData;
     // public int[] trianglesData;
     // public SerializableVector2[] uvData;
