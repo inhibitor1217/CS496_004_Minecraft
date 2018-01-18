@@ -20,6 +20,7 @@ public class Inventory : MonoBehaviour {
     public List<Item> items = new List<Item>();
 
     public Font textFont;
+    public Material tileset;
 
     // Use this for initialization
     void Start () {
@@ -80,7 +81,7 @@ public class Inventory : MonoBehaviour {
         {
             for (int i = 0; i < items.Count; i++)
             {
-                if (items[i].ID == -1)
+                if (items[i].ID == 0)
                 {
                     items[i] = itemToAdd;
                     GameObject itemObj = Instantiate(invItem);

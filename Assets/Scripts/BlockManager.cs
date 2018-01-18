@@ -61,7 +61,14 @@ public class BlockManager : MonoBehaviour {
     // Block Texture
     public Material tileset;
 
+    //inventory
+    Inventory inv;
+
     private void Awake() {
+
+        // inventory
+        inv = GameObject.FindGameObjectWithTag("InventoryManager").GetComponent<Inventory>();
+
 
         // Initialize Arrays
         chunks = new Chunk[Constants.chunkArraySize, Constants.chunkArraySize];
@@ -187,6 +194,7 @@ public class BlockManager : MonoBehaviour {
 
             if (selectedTime > Constants.Hardness[getBlock(selectedX, selectedY, selectedZ)]) {
                 // Block Delete Operation
+                inv.AddItem(getBlock(selectedX, selectedY, selectedZ));
                 setBlockAndRender(selectedX, selectedY, selectedZ, 0x00);
                 setSelected(false);
             }

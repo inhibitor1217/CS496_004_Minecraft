@@ -216,6 +216,7 @@ MonoBehaviour:
   slots: []
   items: []
   textFont: {fileID: 12800000, guid: 0b233fbaf5172224a8d9559db39f58f2, type: 3}
+  tileset: {fileID: 2100000, guid: c94f473ea0821cd42999baf8ba4b02e7, type: 2}
 --- !u!1 &409228113
 GameObject:
   m_ObjectHideFlags: 0
@@ -868,7 +869,7 @@ Prefab:
       objectReference: {fileID: 0}
     - target: {fileID: 4524919651373906, guid: b2a98dd9467ce8f40ba773e8fa76ebee, type: 2}
       propertyPath: m_LocalPosition.y
-      value: 80
+      value: 95
       objectReference: {fileID: 0}
     - target: {fileID: 114921293219502532, guid: b2a98dd9467ce8f40ba773e8fa76ebee,
         type: 2}
